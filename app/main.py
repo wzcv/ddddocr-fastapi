@@ -4,7 +4,6 @@ from typing import Optional, Union
 import base64
 from .models import OCRRequest, SlideMatchRequest, DetectionRequest, APIResponse
 from .services import ocr_service
-import json
 
 app = FastAPI()
 
@@ -92,9 +91,9 @@ async def ocr_file_json(
     try:
         image_bytes = await decode_image(image)
         result = ocr_service.ocr_classification(image_bytes)
-        return json.dumps({"status": 200, "result": result, "msg": ""})
+        return {"status": 200, "result": result, "msg": ""}
     except Exception as e:
-        return json.dumps({"status": 200, "result": None, "msg": str(e)})
+        return {"status": 200, "result": "", "msg": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
