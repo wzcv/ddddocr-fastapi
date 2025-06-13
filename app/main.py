@@ -27,7 +27,21 @@ async def decode_image(image: Union[UploadFile, StarletteUploadFile, str, None])
             raise HTTPException(status_code=400, detail="Invalid base64 string")
     else:
         raise HTTPException(status_code=400, detail="Invalid image input")
-
+    
+async def get_file_size(file: UploadFile) -> int:
+    """Reads the file in chunks to determine its size."""
+    size = 0
+    try:
+        while True:
+            chunk = await file.read(1024 * 1024)  # 1MB chunks
+            if not chunk:
+                break
+            size += len(chunk)
+        await file.seek(0)  # Reset file pointer to the beginning
+        return size
+    except Exception as e:
+        print(f"Error getting file size: {e}")
+        return 0
 
 @app.post("/ocr", response_model=APIResponse)
 async def ocr_endpoint(
@@ -57,8 +71,12 @@ async def slide_match_endpoint(
         simple_target: bool = Form(False)
 ):
     try:
-        if (background is None and target is None) or (background_file.size == 0 and target_file.size == 0):
+        # Check if both file uploads and base64 strings are missing.  This is the primary validation.
+        if (target_file is None and target is None) or (background_file is None and background is None):
             return APIResponse(code=400, message="Both target and background must be provided")
+        # Check if either file upload is empty (size is 0).  This is a secondary validation.
+        if target_file and await get_file_size(target_file) == 0 or background_file and await get_file_size(background_file) == 0:
+              return APIResponse(code=400, message="Both target and background files must not be empty")
 
         target_bytes = await decode_image(target_file or target)
         background_bytes = await decode_image(background_file or background)
